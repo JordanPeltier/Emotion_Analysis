@@ -1,47 +1,55 @@
 import numpy as np
 import cv2
-import sys
 import smile_detection
 import gauss_kernel
-import scipy
+from scipy import ndimage
+import time
 
-# idea : first analyse the dim of the video in entrance to work with a fixed size nd array after
+haar_face = cv2.CascadeClassifier('../data/haarcascade_frontalface_default.xml')
 
+# video encoded in XVID
+# TODO : try with other encoding
+video_jordan = '../data/output.avi'
 
-haarFace = cv2.CascadeClassifier('../data/haarcascade_frontalface_default.xml')
-
-video = '../data/output.avi'
 
 def get_dim(video):
+    """
+    return the 3 dimensions of a video : pixels in width and height and number of frames (time)
+    :param video: path to a video on disk -> .avi container and Xvid enconding
+    :return: a tuple with the 3 dimensions
+    """
+    # noinspection PyArgumentList
     cap = cv2.VideoCapture(video)
     t = 0
     ret, frame = cap.read()
 
     if frame is not None:
         t += 1
-        detectedFace = haarFace.detectMultiScale(frame)
+        detectedface = haar_face.detectMultiScale(frame)
 
         # FACE: find the largest detected face as detected face
-        maxFaceSize = 0
-        maxFace = ()
-        if detectedFace.any():
-            for face in detectedFace:  # face: [0]: x; [1]: y; [2]: width; [3]: height
-                if face[3] * face[2] > maxFaceSize:
-                    maxFaceSize = face[3] * face[2]
-                    maxFace = face
-    frame = smile_detection.crop(maxFace, frame)
+        maxfacesize = 0
+        max_face = ()
+        if detectedface.any():
+            for face in detectedface:  # face: [0]: x; [1]: y; [2]: width; [3]: height
+                if face[3] * face[2] > maxfacesize:
+                    maxfacesize = face[3] * face[2]
+                    max_face = face
+    # noinspection PyUnboundLocalVariable
+    frame = smile_detection.crop(max_face, frame)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('frame', gray)
 
-    while (cap.isOpened()):
+    while cap.isOpened():
         ret, frame = cap.read()
 
         if frame is not None:
-            t+=1
-            frame = smile_detection.crop(maxFace, frame)
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+            t += 1
+            frame = smile_detection.crop(max_face, frame)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.imshow('frame', gray)
+
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break
         else:
@@ -49,45 +57,46 @@ def get_dim(video):
 
     cap.release()
     cv2.destroyAllWindows()
-    return t, maxFace[2], maxFace[3]
+    return t, max_face[2], max_face[3]
+
 
 def get_ndarray(video):
-
-
-    data = np.ndarray(shape = get_dim(video))
+    """
+    Tranform a sequence of frame into a nd array of the dimensions given by get_dim
+    :param video: path to a video on disk -> .avi container and Xvid enconding
+    :return: a ndarray
+    """
+    data = np.ndarray(shape=get_dim(video))
+    # noinspection PyArgumentList
     cap = cv2.VideoCapture(video)
     ret, frame = cap.read()
 
     if frame is not None:
         t = 0
-        detectedFace = haarFace.detectMultiScale(frame)
+        detected_face = haar_face.detectMultiScale(frame)
 
         # FACE: find the largest detected face as detected face
-        maxFaceSize = 0
-        maxFace = ()
-        if detectedFace.any():
-            for face in detectedFace:  # face: [0]: x; [1]: y; [2]: width; [3]: height
-                if face[3] * face[2] > maxFaceSize:
-                    maxFaceSize = face[3] * face[2]
-                    maxFace = face
-    frame = smile_detection.crop(maxFace, frame)
+        max_face_size = 0
+        max_face = ()
+        if detected_face.any():
+            for face in detected_face:  # face: [0]: x; [1]: y; [2]: width; [3]: height
+                if face[3] * face[2] > max_face_size:
+                    max_face_size = face[3] * face[2]
+                    max_face = face
+    # noinspection PyUnboundLocalVariable
+    frame = smile_detection.crop(max_face, frame)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # noinspection PyUnboundLocalVariable
     data[t] = gray
-    cv2.imshow('frame', gray)
 
-    while (cap.isOpened()):
+    while cap.isOpened():
         ret, frame = cap.read()
 
         if frame is not None:
             t += 1
-            frame = smile_detection.crop(maxFace, frame)
+            frame = smile_detection.crop(max_face, frame)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             data[t] = gray
-
-
-            cv2.imshow('frame', gray)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
-                break
         else:
             break
 
@@ -97,10 +106,41 @@ def get_ndarray(video):
     return data
 
 
+def get_gauss_blur_video(video, dim, sig, tau):
 
-get_ndarray(video)
-kern = gauss_kernel.gauss_kernel_3d(5, 1, 1)
+    """
+    Return the video in a ndarray format after convolution with a 3D gaussian kernel
+    :param video: path to a video on disk -> .avi container and Xvid enconding
+    :return: a ndarray format video after the convolution (blur in both space and time)
+    """
 
+    input_video = get_ndarray(video)
+    input_video = input_video.astype(np.uint8)
+    kern = gauss_kernel.gauss_kernel_3d(dim, sig, tau)
+    gauss_kernel.plot_kern_3d(kern)
+
+
+    print "\n" + "Beginning of linear scale space transformation (convolution with a 3D Gaussian kernel)"
+    t0 = time.time()
+    output = ndimage.convolve(input_video, kern)
+    t1 = time.time()
+    print "\n" + "End of linear scale space transformation (convolution with a 3D Gaussian kernel)"
+    print "\n" + "Process time : " + str(t1-t0)
+
+
+    output = output.astype(np.uint8)
+
+
+
+    for frame in output:
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            break
+
+    return output
+
+
+get_gauss_blur_video(video_jordan, 20, 1, 10)
 
 # fgbg = cv2.createBackgroundSubtractorMOG2()
 # frame = frame[20:250, 45:170]
