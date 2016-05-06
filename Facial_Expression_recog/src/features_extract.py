@@ -136,11 +136,51 @@ def get_gauss_blur_video(video, dim, sig, tau):
         cv2.imshow('frame', frame)
         if cv2.waitKey(25) & 0xFF == ord('q'):
             break
-
+    cv2.destroyAllWindows()
     return output
 
 
-get_gauss_blur_video(video_jordan, 20, 1, 10)
+
+foo = get_gauss_blur_video(video_jordan, 10, 10, 10)
+print foo.shape
+
+
+diff_t = np.diff(foo, n=1, axis=0)
+diff_y = np.diff(foo, n=1, axis=1)
+diff_x = np.diff(foo, n=1, axis=2)
+
+
+print diff_x.shape, diff_y.shape, diff_t.shape
+
+sec_mom_matrix = np.ndarray(shape=(foo.shape[0]-1, foo.shape[1]-1, foo.shape[2]-1), dtype = np.ndarray)
+for tt in range(foo.shape[0]-1):
+    for yy in range(foo.shape[1]-1):
+        for xx in range(foo.shape[2]-1):
+            x = int(diff_x[tt,yy,xx])
+            y = int(diff_y[tt,yy,xx])
+            t = int(diff_t[tt,yy,xx])
+            sec_mom_matrix[tt, yy, xx] = np.array([[x^2, x*y, x*t],
+                                                [x*y, y^2, y*t],
+                                                [x*t, y*t, t^2]])
+
+
+
+
+for frame in sec_mom_matrix:
+    framebis = np.ndarray(shape=frame.shape)
+    for i in frame[0,0]:
+        framebis.append(i)
+    cv2.imshow('frame', framebis)
+    if cv2.waitKey(25) & 0xFF == ord('q'):
+        break
+# for frame in foo :
+#     diff_x[t] = np.diff(frame, n = 1, axis = 1)
+#     diff_y[t] = np.diff(frame, n = 1, axis = 0)
+#     t+=1
+
+
+
+
 
 # fgbg = cv2.createBackgroundSubtractorMOG2()
 # frame = frame[20:250, 45:170]
