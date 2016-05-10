@@ -3,7 +3,7 @@ import cv2
 from mayavi import mlab
 
 
-def gauss_kernel_3d(dim, sig, tau):
+def gauss_kernel_3d(dims, dimt, sig, tau):
     """
 
     :param dim: length of the 3D-Gaussian Kernel
@@ -13,17 +13,17 @@ def gauss_kernel_3d(dim, sig, tau):
     """
 
     # initialisation of the kernel
-    kern = np.zeros(shape=(dim, dim, dim), dtype=float)
+    kern = np.zeros(shape=(dimt, dims, dims), dtype=float)
 
     # compute the kernel in the space dimension
-    kernxy = cv2.getGaussianKernel(dim, sig)
+    kernxy = cv2.getGaussianKernel(dims, sig)
     kern_space = np.outer(kernxy, kernxy)
 
     # compute the kernel in the time dimension
-    kernt = cv2.getGaussianKernel(dim, tau)
+    kernt = cv2.getGaussianKernel(dimt, tau)
 
     # product of both to obtain the spatio-temporal kernel
-    for n in range(dim):
+    for n in range(dimt):
         kern[n] = kern_space * kernt[n]
 
     return kern
