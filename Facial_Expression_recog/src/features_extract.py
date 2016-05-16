@@ -5,15 +5,18 @@ import gauss_kernel
 from scipy import ndimage
 import time
 import shelve
+import mouthdetection
 
 haar_face = cv2.CascadeClassifier('../data/haarcascade_frontalface_default.xml')
+haar_mouth = cv2.CascadeClassifier('../data/haarcascade_mouth.xml')
+
 
 # video encoded in XVID
 # TODO : try with other encoding
 video_jordan = '../data/output.avi'
 
 
-def get_dim(video):
+def get_dim(video, mouth = False):
     """
     return the 3 dimensions of a video : pixels in width and height and number of frames (time)
     :param video: path to a video on disk -> .avi container and Xvid enconding
@@ -26,18 +29,14 @@ def get_dim(video):
 
     if frame is not None:
         t += 1
-        detectedface = haar_face.detectMultiScale(frame)
+        if mouth == False:
+            detected_object = mouthdetection.findmouth(frame, haar_face, haar_mouth)[0]
+        else:
+            detected_object = mouthdetection.findmouth(frame, haar_face, haar_mouth)[1]
 
-        # FACE: find the largest detected face as detected face
-        maxfacesize = 0
-        max_face = ()
-        if detectedface.any():
-            for face in detectedface:  # face: [0]: x; [1]: y; [2]: width; [3]: height
-                if face[3] * face[2] > maxfacesize:
-                    maxfacesize = face[3] * face[2]
-                    max_face = face
+
     # noinspection PyUnboundLocalVariable
-    frame = smile_detection.crop(max_face, frame)
+    frame = smile_detection.crop(detected_object, frame)
     y = frame.shape[0]
     x = frame.shape[1]
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -49,7 +48,7 @@ def get_dim(video):
         if frame is not None:
 
             t += 1
-            frame = smile_detection.crop(max_face, frame)
+            frame = smile_detection.crop(detected_object, frame)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.imshow('frame', gray)
 
@@ -63,7 +62,7 @@ def get_dim(video):
     return t, y, x
 
 
-def get_ndarray(video):
+def get_ndarray(video, mouth = False):
     """
     Tranform a sequence of frame into a nd array of the dimensions given by get_dim
     :param video: path to a video on disk -> .avi container and Xvid enconding
@@ -76,18 +75,16 @@ def get_ndarray(video):
 
     if frame is not None:
         t = 0
-        detected_face = haar_face.detectMultiScale(frame)
 
-        # FACE: find the largest detected face as detected face
-        max_face_size = 0
-        max_face = ()
-        if detected_face.any():
-            for face in detected_face:  # face: [0]: x; [1]: y; [2]: width; [3]: height
-                if face[3] * face[2] > max_face_size:
-                    max_face_size = face[3] * face[2]
-                    max_face = face
+
+        if mouth == False:
+            detected_object = mouthdetection.findmouth(frame,haar_face, haar_mouth)[0]
+        else :
+            detected_object = mouthdetection.findmouth(frame,haar_face, haar_mouth)[1]
+
+
     # noinspection PyUnboundLocalVariable
-    frame = smile_detection.crop(max_face, frame)
+    frame = smile_detection.crop(detected_object, frame)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.normalize(gray, gray, 0, 255, norm_type=cv2.NORM_MINMAX)
     # noinspection PyUnboundLocalVariable
@@ -98,7 +95,7 @@ def get_ndarray(video):
 
         if frame is not None:
             t += 1
-            frame = smile_detection.crop(max_face, frame)
+            frame = smile_detection.crop(detected_object, frame)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.normalize(gray, gray, 0, 255, norm_type=cv2.NORM_MINMAX)
             data[t] = gray
@@ -123,7 +120,7 @@ def get_gauss_blur_video(video, dims, dimt, sig, tau):
     input_video = get_ndarray(video)
     input_video = input_video.astype(np.uint8)
     kern = gauss_kernel.gauss_kernel_3d(dims, dimt, sig, tau)
-    # gauss_kernel.plot_kern_3d(kern)
+    gauss_kernel.plot_kern_3d(kern)
 
 
     print "\n" + "Beginning of linear scale space transformation (convolution with a 3D Gaussian kernel)"
@@ -135,7 +132,7 @@ def get_gauss_blur_video(video, dims, dimt, sig, tau):
 
 
     output = output.astype(np.uint8)
-    cv2.normalize(output, output, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(output, output, 0, 255, norm_type=cv2.NORM_MINMAX)
 
 
 
@@ -241,43 +238,43 @@ def display_moment_matrix(moment_matrix, direction="tt"):
 def get_h(video, dims = 5, dimt = 5, sig = np.sqrt(2), tau = np.sqrt(2), s = 1):
     matrix = get_moment_matrix(video, dims, dimt, sig, tau)
     xx = get_xx(matrix)
-    cv2.normalize(xx, xx, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(xx, xx, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     xy = get_xy(matrix)
-    cv2.normalize(xy, xy, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(xy, xy, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     xt = get_xt(matrix)
-    cv2.normalize(xt, xt, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(xt, xt, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     yt = get_yt(matrix)
-    cv2.normalize(yt, yt, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(yt, yt, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     yy = get_yy(matrix)
-    cv2.normalize(yy, yy, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(yy, yy, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     tt = get_tt(matrix)
-    cv2.normalize(tt, tt, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(tt, tt, 0, 255, norm_type=cv2.NORM_MINMAX)
 
 
     kern = gauss_kernel.gauss_kernel_3d(dims, dimt, s*sig, s*tau)
 
     mu_xx = ndimage.convolve(xx, kern)
-    cv2.normalize(mu_xx, mu_xx, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(mu_xx, mu_xx, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     mu_xy = ndimage.convolve(xy, kern)
-    cv2.normalize(mu_xy, mu_xy, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(mu_xy, mu_xy, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     mu_xt = ndimage.convolve(xt, kern)
-    cv2.normalize(mu_xt, mu_xt, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(mu_xt, mu_xt, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     mu_yt = ndimage.convolve(yt, kern)
-    cv2.normalize(mu_yt, mu_yt, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(mu_yt, mu_yt, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     mu_yy = ndimage.convolve(yy, kern)
-    cv2.normalize(mu_yy, mu_yy, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(mu_yy, mu_yy, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     mu_tt = ndimage.convolve(tt, kern)
-    cv2.normalize(mu_tt, mu_tt, 0, 255, norm_type=cv2.NORM_MINMAX)
+    #cv2.normalize(mu_tt, mu_tt, 0, 255, norm_type=cv2.NORM_MINMAX)
 
     H = np.ndarray(shape = matrix.shape, dtype = float)
 
@@ -298,12 +295,12 @@ def get_h(video, dims = 5, dimt = 5, sig = np.sqrt(2), tau = np.sqrt(2), s = 1):
 
 
 
-# h = get_h(video_jordan)
+h = get_h(video_jordan, dims = 3, dimt = 3, sig = np.sqrt(2), tau = np.sqrt(2), s = 1)
 
-# my_shelf = shelve.open("shelve.out")
-# for key in my_shelf:
-#     globals()[key]=my_shelf[key]
-# my_shelf.close()
+my_shelf = shelve.open("shelve.out")
+for key in my_shelf:
+    globals()[key]=my_shelf[key]
+my_shelf.close()
 #
 # for frame in h:
 #     cv2.imshow("frame", frame)
@@ -326,8 +323,6 @@ def get_h(video, dims = 5, dimt = 5, sig = np.sqrt(2), tau = np.sqrt(2), s = 1):
 ###################################################################
 
 
-
-
 # fgbg = cv2.createBackgroundSubtractorMOG2()
 # frame = frame[20:250, 45:170]
 
@@ -339,3 +334,5 @@ def get_h(video, dims = 5, dimt = 5, sig = np.sqrt(2), tau = np.sqrt(2), s = 1):
 
 # Threshold for an optimal value, it may vary depending on the image.
 # frame[dst > 0.01 * dst.max()] = [0, 0, 255]
+
+

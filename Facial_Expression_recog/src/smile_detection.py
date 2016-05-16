@@ -26,7 +26,7 @@ def show(area, img):
 given an area to be cropped, crop() returns a cropped image
 """
 def crop(area, img):
-    crop = img[area[1]:area[1] + area[3]+30, area[0]:area[0]+area[2]] #img[y: y + h, x: x + w]
+    crop = img[area[1]:area[1] + area[3], area[0]:area[0]+area[2]] #img[y: y + h, x: x + w]
     return crop
 
 """

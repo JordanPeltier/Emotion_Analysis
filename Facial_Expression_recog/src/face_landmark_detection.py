@@ -6,6 +6,7 @@ haar_face = cv2.CascadeClassifier('../data/haarcascade_frontalface_default.xml')
 detector = dl.get_frontal_face_detector()
 predictor = dl.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
+
 cap = cv2.VideoCapture(0)
 
 
@@ -32,13 +33,13 @@ while (cap.isOpened()):
                     for point in points:
                         frame = cv2.circle(frame, tuple(point), 2, (0, 0, 255), -1)
                 cv2.imshow('frame', frame)
-                if cv2.waitKey(25) & 0xFF == ord('q'):
+                if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
 
         except AttributeError:
             print "No face detected"
             cv2.imshow('frame', frame)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
+            if cv2.waitKey(10) & 0xFF == ord('q'):
                 break
     else:
         break
